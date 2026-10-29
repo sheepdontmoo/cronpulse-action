@@ -1,0 +1,33 @@
+name: CronPulse ping
+description: Get alerted when a scheduled GitHub Actions workflow fails or silently stops running. Sends a heartbeat ping to CronPulse.
+author: SupaDesign
+branding:
+  icon: activity
+  color: green
+inputs:
+  ping-url:
+    description: Private check ping URL (store in a repository secret)
+    required: true
+  status:
+    description: start, success or fail
+    required: false
+    default: success
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        PING_URL: ${{ inputs.ping-url }}
+        PING_STATUS: ${{ inputs.status }}
+      run: |
+        case "$PING_STATUS" in
+          start) suffix=/start ;;
+          success) suffix= ;;
+          fail) suffix=/fail ;;
+          *) echo 'status must be start, success or fail' >&2; exit 2 ;;
+        esac
+        case "$PING_URL" in
+          https://*/p/*) ;;
+          *) echo 'ping-url must be an HTTPS check URL' >&2; exit 2 ;;
+        esac
+        curl -fsS -m 10 --retry 3 -- "$PING_URL$suffix" >/dev/null
